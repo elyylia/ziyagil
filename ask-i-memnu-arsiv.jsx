@@ -1,0 +1,959 @@
+import { useState, useEffect, useRef } from "react";
+
+const GOLD = "#C9A84C";
+const DARK_GOLD = "#A07830";
+const CRIMSON = "#8B1A2E";
+const DEEP_CRIMSON = "#5C0F1E";
+const NAVY = "#0D1B2A";
+const DEEP_NAVY = "#070E18";
+const IVORY = "#F5EDD6";
+const IVORY_DIM = "#D8CCAF";
+
+const fonts = `
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Lora:ital,wght@0,400;0,500;1,400&family=Montserrat:wght@300;400;500&display=swap');
+`;
+
+const globalStyles = `
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: ${DEEP_NAVY}; color: ${IVORY}; font-family: 'Montserrat', sans-serif; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: ${DEEP_NAVY}; }
+  ::-webkit-scrollbar-thumb { background: ${GOLD}; border-radius: 2px; }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes shimmer { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+  @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
+  @keyframes progressGrow { from { width: 0; } to { width: var(--target-width); } }
+  @keyframes scanline { 0% { top: -20%; } 100% { top: 110%; } }
+  @keyframes goldPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(201,168,76,0); } 50% { box-shadow: 0 0 24px 4px rgba(201,168,76,0.18); } }
+  @keyframes reveal { from { opacity:0; transform:translateY(12px) scale(0.98); } to { opacity:1; transform:translateY(0) scale(1); } }
+`;
+
+// ─── NAV ────────────────────────────────────────────────────────────────────
+function Nav({ active, setActive }) {
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 60);
+    window.addEventListener("scroll", fn);
+    return () => window.removeEventListener("scroll", fn);
+  }, []);
+  const links = ["Malikane", "Karakterler", "Arşiv", "Firdevs Hanım'ın Notları", "Quiz"];
+  return (
+    <nav style={{
+      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+      background: scrolled ? `rgba(7,14,24,0.97)` : "transparent",
+      borderBottom: scrolled ? `1px solid rgba(201,168,76,0.18)` : "none",
+      backdropFilter: scrolled ? "blur(12px)" : "none",
+      transition: "all 0.4s ease",
+      padding: "0 clamp(1rem,4vw,3rem)",
+    }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 68 }}>
+        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", color: GOLD, letterSpacing: "0.12em", cursor: "pointer" }}
+          onClick={() => setActive("Malikane")}>
+          ZİYAGİL ARŞİVİ
+        </div>
+        {/* Desktop */}
+        <div style={{ display: "flex", gap: "2.2rem", alignItems: "center" }}>
+          {links.map(l => (
+            <button key={l} onClick={() => setActive(l)} style={{
+              background: "none", border: "none", cursor: "pointer",
+              fontFamily: "'Montserrat', sans-serif", fontSize: "0.72rem",
+              letterSpacing: "0.16em", textTransform: "uppercase",
+              color: active === l ? GOLD : IVORY_DIM,
+              borderBottom: active === l ? `1px solid ${GOLD}` : "1px solid transparent",
+              paddingBottom: 2, transition: "all 0.25s ease",
+            }}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+// ─── HERO ───────────────────────────────────────────────────────────────────
+function Hero({ setActive }) {
+  return (
+    <section style={{
+      minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      position: "relative", overflow: "hidden",
+      background: `radial-gradient(ellipse at 50% 60%, ${NAVY} 0%, ${DEEP_NAVY} 60%, #020609 100%)`,
+    }}>
+      {/* mansion silhouette */}
+      <svg style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 900, opacity: 0.07, pointerEvents: "none" }}
+        viewBox="0 0 900 320" fill="none">
+        <rect x="350" y="60" width="200" height="260" fill={IVORY} />
+        <rect x="280" y="120" width="80" height="200" fill={IVORY} />
+        <rect x="540" y="120" width="80" height="200" fill={IVORY} />
+        <polygon points="350,60 450,0 550,60" fill={IVORY} />
+        <rect x="410" y="200" width="80" height="120" fill={DEEP_NAVY} />
+        <rect x="370" y="140" width="50" height="60" fill={DEEP_NAVY} />
+        <rect x="480" y="140" width="50" height="60" fill={DEEP_NAVY} />
+        <rect x="295" y="160" width="40" height="50" fill={DEEP_NAVY} />
+        <rect x="565" y="160" width="40" height="50" fill={DEEP_NAVY} />
+        <rect x="0" y="318" width="900" height="2" fill={IVORY} />
+        {/* piano keys hint */}
+        {Array.from({ length: 18 }).map((_, i) => (
+          <rect key={i} x={i * 50} y={290} width={48} height={30} fill={IVORY} opacity={i % 2 === 0 ? 1 : 0} />
+        ))}
+        {Array.from({ length: 11 }).map((_, i) => (
+          <rect key={i} x={i * 50 + 32} y={290} width={28} height={20} fill={DEEP_NAVY} opacity={i % 3 !== 1 ? 1 : 0} />
+        ))}
+      </svg>
+
+      {/* gold line ornament top */}
+      <div style={{ position: "absolute", top: 120, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{ width: 90, height: 1, background: `linear-gradient(to right, transparent, ${GOLD})` }} />
+        <div style={{ width: 6, height: 6, border: `1px solid ${GOLD}`, transform: "rotate(45deg)" }} />
+        <div style={{ width: 90, height: 1, background: `linear-gradient(to left, transparent, ${GOLD})` }} />
+      </div>
+
+      <div style={{ position: "relative", zIndex: 2, textAlign: "center", padding: "0 1.5rem", animation: "fadeInUp 1.2s ease both" }}>
+        <p style={{ fontFamily: "'Montserrat'", fontSize: "0.65rem", letterSpacing: "0.35em", color: GOLD, marginBottom: "1.6rem", textTransform: "uppercase" }}>
+          Halit Ziya Uşaklıgil · 1900
+        </p>
+        <h1 style={{
+          fontFamily: "'Playfair Display', serif", fontStyle: "italic",
+          fontSize: "clamp(2.6rem, 7vw, 5.2rem)", lineHeight: 1.1,
+          color: IVORY, marginBottom: "0.3rem",
+          textShadow: `0 2px 40px rgba(201,168,76,0.15)`,
+        }}>
+          Siyah Bir Aşkın
+        </h1>
+        <h1 style={{
+          fontFamily: "'Playfair Display', serif",
+          fontSize: "clamp(2.6rem, 7vw, 5.2rem)", lineHeight: 1.1,
+          color: GOLD, marginBottom: "2.4rem",
+          letterSpacing: "0.04em",
+        }}>
+          Anatomisi
+        </h1>
+        <p style={{
+          fontFamily: "'Lora', serif", fontStyle: "italic",
+          fontSize: "clamp(0.95rem, 2vw, 1.15rem)", color: IVORY_DIM,
+          maxWidth: 520, margin: "0 auto 3rem", lineHeight: 1.8,
+        }}>
+          Ziyagil Yalısı'nın karanlık koridorlarında gizlenen aşk, ihanet ve kader...
+        </p>
+        <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+          <button onClick={() => setActive("Karakterler")} style={{
+            background: CRIMSON, border: `1px solid ${DEEP_CRIMSON}`,
+            color: IVORY, fontFamily: "'Montserrat'", fontSize: "0.72rem",
+            letterSpacing: "0.18em", textTransform: "uppercase",
+            padding: "14px 36px", cursor: "pointer",
+            transition: "all 0.3s ease",
+          }}
+            onMouseEnter={e => { e.target.style.background = DEEP_CRIMSON; e.target.style.boxShadow = `0 0 24px rgba(139,26,46,0.5)`; }}
+            onMouseLeave={e => { e.target.style.background = CRIMSON; e.target.style.boxShadow = "none"; }}>
+            Karakterleri Keşfet
+          </button>
+          <button onClick={() => setActive("Quiz")} style={{
+            background: "transparent", border: `1px solid ${GOLD}`,
+            color: GOLD, fontFamily: "'Montserrat'", fontSize: "0.72rem",
+            letterSpacing: "0.18em", textTransform: "uppercase",
+            padding: "14px 36px", cursor: "pointer",
+            transition: "all 0.3s ease",
+          }}
+            onMouseEnter={e => { e.target.style.background = `rgba(201,168,76,0.1)`; }}
+            onMouseLeave={e => { e.target.style.background = "transparent"; }}>
+            Quiz'e Gir
+          </button>
+        </div>
+      </div>
+
+      {/* bottom ornament */}
+      <div style={{ position: "absolute", bottom: 40, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, opacity: 0.5, animation: "float 3s ease-in-out infinite" }}>
+        <div style={{ width: 1, height: 40, background: `linear-gradient(to bottom, ${GOLD}, transparent)` }} />
+        <div style={{ fontSize: 10, letterSpacing: "0.2em", color: GOLD, textTransform: "uppercase" }}>Aşağı</div>
+      </div>
+    </section>
+  );
+}
+
+// ─── CHARACTER CARDS ─────────────────────────────────────────────────────────
+const characters = [
+  {
+    name: "Bihter", surname: "Ziyagil",
+    role: "Yalının Kadını",
+    desc: "Ateşten kalbi, buz gibi gururu. Sevgisini de nefretini de sonuna kadar yaşayan kadın.",
+    quote: "\"Ah, ne kadar sevdim, ne kadar nefret ettim... İkisi de aynı yangından çıktı.\"",
+    color: CRIMSON,
+    initial: "B",
+    symbol: "♦",
+    trait: "Tutkulu · Onurlu · Trajik",
+  },
+  {
+    name: "Behlül", surname: "—",
+    role: "Aşkın Kaçağı",
+    desc: "Güzel, özgür ve sorumsuz. Her kapıyı açar, hiçbirini sonuna kadar girmez.",
+    quote: "\"Bir yerde durmak... Hayır, bu benim için mümkün olmayan şeydi.\"",
+    color: GOLD,
+    initial: "Be",
+    symbol: "♠",
+    trait: "Çekici · Kaygan · Yıkıcı",
+  },
+  {
+    name: "Adnan", surname: "Bey",
+    role: "Yalının Efendisi",
+    desc: "Saf aşkla kör olan adam. Gördüğü her şeyin gerisini görmek istemedi.",
+    quote: "\"Sevmek bu kadar ağır bir yük olabilirdi; bilmiyordum.\"",
+    color: "#4A7FA5",
+    initial: "A",
+    symbol: "♣",
+    trait: "Asil · Saf · Kırılgan",
+  },
+  {
+    name: "Firdevs", surname: "Hanım",
+    role: "Gölgedeki Mimar",
+    desc: "Her hamleyi iki adım önce düşünen anne. İplerini hiç bırakmadı.",
+    quote: "\"Kızım olmadan önce anasıydım; ondan sonra da anası kaldım.\"",
+    color: "#6B4C7A",
+    initial: "F",
+    symbol: "♥",
+    trait: "Hesapçı · Manipülatif · Zeki",
+  },
+  {
+    name: "Nihal", surname: "Ziyagil",
+    role: "Masumiyetin Sesi",
+    desc: "Yalının en saf kalbi. Piyano notalarında hapsolan bir çocukluk.",
+    quote: "\"Ben sadece sevilmek istedim... bu kadar büyük bir suç muydu?\"",
+    color: "#3A6B5C",
+    initial: "N",
+    symbol: "✦",
+    trait: "Saf · Hassas · Yıkılgan",
+  },
+];
+
+function CharacterCard({ char }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: "relative", overflow: "hidden",
+        background: `linear-gradient(160deg, rgba(13,27,42,0.95) 0%, rgba(7,14,24,0.98) 100%)`,
+        border: `1px solid ${hovered ? char.color : "rgba(201,168,76,0.15)"}`,
+        padding: "2.4rem 2rem",
+        cursor: "default",
+        transition: "all 0.45s cubic-bezier(0.23,1,0.32,1)",
+        boxShadow: hovered ? `0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px ${char.color}33` : "0 8px 32px rgba(0,0,0,0.3)",
+        transform: hovered ? "translateY(-6px)" : "translateY(0)",
+        minHeight: 340,
+      }}>
+      {/* bg symbol */}
+      <div style={{
+        position: "absolute", top: "50%", right: -10, transform: "translateY(-50%)",
+        fontSize: "9rem", color: char.color, opacity: hovered ? 0.06 : 0.03,
+        fontFamily: "serif", pointerEvents: "none", transition: "all 0.5s",
+        userSelect: "none",
+      }}>{char.symbol}</div>
+
+      {/* corner accent */}
+      <div style={{ position: "absolute", top: 0, left: 0, width: 40, height: 40,
+        borderTop: `2px solid ${char.color}`, borderLeft: `2px solid ${char.color}` }} />
+      <div style={{ position: "absolute", bottom: 0, right: 0, width: 40, height: 40,
+        borderBottom: `2px solid ${char.color}`, borderRight: `2px solid ${char.color}` }} />
+
+      {/* avatar */}
+      <div style={{
+        width: 64, height: 64, borderRadius: "50%",
+        background: `${char.color}22`, border: `2px solid ${char.color}`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", color: char.color,
+        marginBottom: "1.4rem",
+      }}>
+        {char.initial}
+      </div>
+
+      <p style={{ fontFamily: "'Montserrat'", fontSize: "0.6rem", letterSpacing: "0.22em", color: char.color, textTransform: "uppercase", marginBottom: 6 }}>
+        {char.role}
+      </p>
+      <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.7rem", color: IVORY, marginBottom: 4 }}>
+        {char.name}
+      </h3>
+      <p style={{ fontSize: "0.78rem", color: IVORY_DIM, marginBottom: "1.2rem", fontFamily: "'Montserrat'" }}>
+        {char.trait}
+      </p>
+
+      {/* desc / quote toggle */}
+      <div style={{ position: "relative", minHeight: 90 }}>
+        <p style={{
+          fontFamily: "'Lora', serif", fontSize: "0.9rem", color: IVORY_DIM,
+          lineHeight: 1.75, opacity: hovered ? 0 : 1, transition: "opacity 0.3s ease",
+          position: "absolute", top: 0, left: 0,
+        }}>
+          {char.desc}
+        </p>
+        <p style={{
+          fontFamily: "'Playfair Display', serif", fontStyle: "italic",
+          fontSize: "0.95rem", color: char.color, lineHeight: 1.7,
+          opacity: hovered ? 1 : 0, transition: "opacity 0.4s ease 0.1s",
+          position: "absolute", top: 0, left: 0,
+        }}>
+          {char.quote}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Characters() {
+  return (
+    <section style={{ padding: "7rem clamp(1rem,5vw,4rem) 5rem" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <SectionHeader title="Karakter Analiz Odası" subtitle="Yalıda yaşayanların ruhlarına bir yolculuk" />
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: 24, marginTop: "3rem",
+        }}>
+          {characters.map(c => <CharacterCard key={c.name} char={c} />)}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── LITERARY CORNER ──────────────────────────────────────────────────────────
+const excerpts = [
+  {
+    text: "Ah, bu ufak tefek şeyler! Bir bakış, bir tebessüm, bir el sıkışma... Bunlar ki kalpleri kasıp kavurur, ömürleri mahveder, dünyaları alt üst eder.",
+    page: "s. 47",
+    chapter: "Beşinci Fasıl",
+  },
+  {
+    text: "Bihter bu evde bir esir gibiydi; zincirlerini kimse göremezdi, kendisi bile bazen... Ama her sabah biraz daha sıkışırdı o zincirler.",
+    page: "s. 112",
+    chapter: "Onuncu Fasıl",
+  },
+  {
+    text: "Yalan söylemek için hakikate benzemeyi öğrenmek lazımdır. İşte Firdevs Hanım bunu herkesten iyi bilirdi.",
+    page: "s. 203",
+    chapter: "On Yedinci Fasıl",
+  },
+  {
+    text: "Nihal piyanodan kalktığında gözlerinde yaşlar vardı. Musikinin söyleyemediği şeyleri kalbi söylemişti kendine.",
+    page: "s. 278",
+    chapter: "Yirmi Dördüncü Fasıl",
+  },
+];
+
+function Literary() {
+  return (
+    <section style={{
+      padding: "6rem clamp(1rem,5vw,4rem)",
+      background: `linear-gradient(to bottom, transparent, rgba(9,4,2,0.4), transparent)`,
+    }}>
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <SectionHeader title="Edebi Köşe" subtitle="Halit Ziya Uşaklıgil'in kaleminden" />
+        <div style={{ marginTop: "3rem", display: "flex", flexDirection: "column", gap: 28 }}>
+          {excerpts.map((ex, i) => (
+            <div key={i} style={{
+              background: `linear-gradient(135deg, rgba(245,237,214,0.04) 0%, rgba(201,168,76,0.03) 100%)`,
+              border: `1px solid rgba(201,168,76,0.12)`,
+              borderLeft: `3px solid ${GOLD}`,
+              padding: "2rem 2.4rem",
+              position: "relative",
+              animation: `fadeInUp 0.6s ease ${i * 0.12}s both`,
+            }}>
+              {/* Paper texture lines */}
+              {Array.from({ length: 6 }).map((_, li) => (
+                <div key={li} style={{
+                  position: "absolute", left: 0, right: 0,
+                  top: `${20 + li * 28}%`, height: 1,
+                  background: "rgba(245,237,214,0.025)", pointerEvents: "none",
+                }} />
+              ))}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.2rem", flexWrap: "wrap", gap: 8 }}>
+                <span style={{ fontFamily: "'Montserrat'", fontSize: "0.6rem", letterSpacing: "0.2em", color: GOLD, textTransform: "uppercase" }}>
+                  {ex.chapter}
+                </span>
+                <span style={{ fontFamily: "'Montserrat'", fontSize: "0.6rem", color: IVORY_DIM, letterSpacing: "0.1em" }}>
+                  {ex.page}
+                </span>
+              </div>
+              <blockquote style={{
+                fontFamily: "'Playfair Display', serif", fontStyle: "italic",
+                fontSize: "clamp(1rem, 2.2vw, 1.15rem)", color: IVORY,
+                lineHeight: 1.85, margin: 0,
+              }}>
+                {ex.text}
+              </blockquote>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── SECTION HEADER ──────────────────────────────────────────────────────────
+function SectionHeader({ title, subtitle }) {
+  return (
+    <div style={{ textAlign: "center", marginBottom: "1rem" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginBottom: "1.2rem" }}>
+        <div style={{ height: 1, width: 60, background: `linear-gradient(to right, transparent, ${GOLD})` }} />
+        <div style={{ width: 5, height: 5, border: `1px solid ${GOLD}`, transform: "rotate(45deg)" }} />
+        <div style={{ height: 1, width: 60, background: `linear-gradient(to left, transparent, ${GOLD})` }} />
+      </div>
+      <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.8rem,4vw,2.6rem)", color: IVORY, marginBottom: "0.6rem" }}>
+        {title}
+      </h2>
+      <p style={{ fontFamily: "'Lora', serif", fontStyle: "italic", fontSize: "0.95rem", color: IVORY_DIM }}>
+        {subtitle}
+      </p>
+    </div>
+  );
+}
+
+// ─── WHO ARE YOU QUIZ ────────────────────────────────────────────────────────
+const whoQuestions = [
+  {
+    q: "Bir kriz anında ilk tepkin ne olur?",
+    img: "🌑",
+    options: [
+      { text: "Odama kapanıp içimde ağlarım", char: "Nihal" },
+      { text: "Durumu lehime çevirecek stratejiyi kurarım", char: "Firdevs" },
+      { text: "Her şeyi yakıp yıkmak pahasına dürüst olurum", char: "Bihter" },
+      { text: "Uzaklara kaçar, izimi kaybettiririm", char: "Behlül" },
+    ],
+  },
+  {
+    q: "Aşkta en çok neye değer verirsin?",
+    img: "🕯️",
+    options: [
+      { text: "Güvene ve sadakate", char: "Adnan" },
+      { text: "Özgürlüğe ve anlık coşkuya", char: "Behlül" },
+      { text: "Yoğunluğa ve tam teslimiyete", char: "Bihter" },
+      { text: "Kontrol etme gücüne", char: "Firdevs" },
+    ],
+  },
+  {
+    q: "Seni en iyi tanımlayan cümle hangisi?",
+    img: "🪞",
+    options: [
+      { text: "Dünya bana borçlu, ödeme zamanı", char: "Firdevs" },
+      { text: "Sevilmek istiyorum, başka bir şey değil", char: "Nihal" },
+      { text: "Ya hep ya hiç", char: "Bihter" },
+      { text: "Bugünü yaşa, yarın başkadır", char: "Behlül" },
+    ],
+  },
+  {
+    q: "Bir sır öğrendiğinde ne yaparsın?",
+    img: "📜",
+    options: [
+      { text: "Saklarım ama üzülürüm", char: "Nihal" },
+      { text: "Bunu bir fırsat olarak görürüm", char: "Firdevs" },
+      { text: "Patlarım, söylerim, pişman olurum", char: "Bihter" },
+      { text: "Unut gitsin, bana ne", char: "Behlül" },
+    ],
+  },
+  {
+    q: "Hayatının filmi çekilse hangi müzik eşlik ederdi?",
+    img: "🎹",
+    options: [
+      { text: "Ağır tempolu, hüzünlü bir piyano sonatı", char: "Nihal" },
+      { text: "Karanlık bir opera arya", char: "Bihter" },
+      { text: "Kurnaz, tiz bir yaylı çalgı", char: "Firdevs" },
+      { text: "Hafif caz, sahil barı melodisi", char: "Behlül" },
+    ],
+  },
+];
+
+const charResults = {
+  Bihter: {
+    title: "Sen bir Bihter Ziyagil'sin",
+    desc: "Aşk seni yakar, sen de yanmaya devam edersin. Tutkunun ve gurururun arasında sıkışmış bir ruh. Pişmanlıklarını değil, hissettiklerini hatırlarsın.",
+    color: CRIMSON,
+  },
+  Behlül: {
+    title: "Sen bir Behlül'sün",
+    desc: "Özgürlük her şeyden değerli. Sorumluluktan kaçarsın ama güzel anlara herkesten çok değer verirsin. Kırık kalplerden haberin olmaz çünkü bakmak istemezsin.",
+    color: GOLD,
+  },
+  Firdevs: {
+    title: "Sen bir Firdevs Yöreoğlu'sun",
+    desc: "Her zaman en az iki hamle sonrasını düşünüyorsun. Güç sende kalmalı, ip senin elinde olmalı. Bunu iyi yönetirsen büyük işler yaparsın.",
+    color: "#6B4C7A",
+  },
+  Nihal: {
+    title: "Sen bir Nihal Ziyagil'sin",
+    desc: "Saf, hassas ve derin. Başkalarının acılarını kendinmiş gibi hissedersin. Piyano tuşları kadar kırılgansın ama melodin herkesten güzel.",
+    color: "#3A6B5C",
+  },
+  Adnan: {
+    title: "Sen bir Adnan Bey'sin",
+    desc: "Asaleti ve sadakati her şeyin önünde tutuyorsun. Belki etrafında dönen oyunları görmüyorsun ama kalbinin temizliği tartışılmaz.",
+    color: "#4A7FA5",
+  },
+};
+
+function WhichCharacterQuiz() {
+  const [step, setStep] = useState(0); // 0=intro, 1..n=question, n+1=result
+  const [votes, setVotes] = useState({});
+  const [selected, setSelected] = useState(null);
+  const total = whoQuestions.length;
+
+  const handleAnswer = (char) => {
+    const newVotes = { ...votes, [char]: (votes[char] || 0) + 1 };
+    setVotes(newVotes);
+    setSelected(char);
+    setTimeout(() => {
+      setSelected(null);
+      if (step - 1 < total - 1) setStep(s => s + 1);
+      else setStep(total + 1);
+    }, 600);
+  };
+
+  const reset = () => { setStep(0); setVotes({}); setSelected(null); };
+
+  const getResult = () => {
+    const winner = Object.entries(votes).sort((a, b) => b[1] - a[1])[0]?.[0] || "Bihter";
+    return charResults[winner] || charResults["Bihter"];
+  };
+
+  const progress = step === 0 ? 0 : Math.min(((step - 1) / total) * 100, 100);
+
+  if (step === 0) return (
+    <div style={{ textAlign: "center", padding: "3rem 1rem" }}>
+      <div style={{ fontSize: "3rem", marginBottom: "1.5rem" }}>🪞</div>
+      <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.8rem", color: IVORY, marginBottom: "0.8rem" }}>
+        Hangi Karaktersin?
+      </h3>
+      <p style={{ fontFamily: "'Lora', serif", fontStyle: "italic", color: IVORY_DIM, marginBottom: "2rem", lineHeight: 1.7 }}>
+        {total} soru ile ruhun hangi Ziyagil yalısı sakinini yansıttığını keşfet.
+      </p>
+      <button onClick={() => setStep(1)} style={{
+        background: CRIMSON, border: "none", color: IVORY,
+        fontFamily: "'Montserrat'", fontSize: "0.72rem", letterSpacing: "0.18em",
+        textTransform: "uppercase", padding: "14px 40px", cursor: "pointer",
+        transition: "all 0.3s",
+      }}
+        onMouseEnter={e => e.target.style.background = DEEP_CRIMSON}
+        onMouseLeave={e => e.target.style.background = CRIMSON}>
+        Testi Başlat
+      </button>
+    </div>
+  );
+
+  if (step === total + 1) {
+    const res = getResult();
+    return (
+      <div style={{ textAlign: "center", padding: "2rem 1rem", animation: "reveal 0.6s ease both" }}>
+        <div style={{ width: 80, height: 80, borderRadius: "50%", background: `${res.color}22`, border: `2px solid ${res.color}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem", fontSize: "2rem" }}>✦</div>
+        <p style={{ fontFamily: "'Montserrat'", fontSize: "0.6rem", letterSpacing: "0.25em", color: res.color, textTransform: "uppercase", marginBottom: "0.8rem" }}>Sonucun</p>
+        <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.6rem", color: IVORY, marginBottom: "1rem" }}>{res.title}</h3>
+        <p style={{ fontFamily: "'Lora', serif", fontStyle: "italic", color: IVORY_DIM, lineHeight: 1.8, maxWidth: 480, margin: "0 auto 2rem" }}>{res.desc}</p>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          <button onClick={reset} style={{ background: "transparent", border: `1px solid ${GOLD}`, color: GOLD, fontFamily: "'Montserrat'", fontSize: "0.68rem", letterSpacing: "0.15em", padding: "10px 28px", cursor: "pointer", textTransform: "uppercase" }}>
+            Tekrar Dene
+          </button>
+          <button onClick={() => alert("Sonuç kopyalandı: " + res.title)} style={{ background: res.color, border: "none", color: IVORY, fontFamily: "'Montserrat'", fontSize: "0.68rem", letterSpacing: "0.15em", padding: "10px 28px", cursor: "pointer", textTransform: "uppercase" }}>
+            Paylaş ↗
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const q = whoQuestions[step - 1];
+  return (
+    <div style={{ animation: "reveal 0.4s ease both" }}>
+      {/* Progress */}
+      <div style={{ marginBottom: "2rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+          <span style={{ fontFamily: "'Montserrat'", fontSize: "0.65rem", color: GOLD, letterSpacing: "0.15em" }}>
+            SORU {step} / {total}
+          </span>
+        </div>
+        <div style={{ height: 2, background: "rgba(201,168,76,0.15)", borderRadius: 2 }}>
+          <div style={{ height: "100%", width: `${(step / total) * 100}%`, background: GOLD, borderRadius: 2, transition: "width 0.5s ease" }} />
+        </div>
+      </div>
+
+      <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+        <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>{q.img}</div>
+        <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.1rem,2.5vw,1.4rem)", color: IVORY, lineHeight: 1.5 }}>{q.q}</h3>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {q.options.map((opt, i) => {
+          const isSelected = selected === opt.char;
+          return (
+            <button key={i} onClick={() => !selected && handleAnswer(opt.char)} style={{
+              background: isSelected ? `${CRIMSON}33` : "rgba(13,27,42,0.8)",
+              border: `1px solid ${isSelected ? CRIMSON : "rgba(201,168,76,0.2)"}`,
+              color: IVORY, fontFamily: "'Lora', serif", fontStyle: "italic",
+              fontSize: "0.92rem", padding: "1.1rem 1rem", cursor: "pointer",
+              textAlign: "left", lineHeight: 1.5, transition: "all 0.3s ease",
+            }}
+              onMouseEnter={e => { if (!selected) { e.target.style.borderColor = CRIMSON; e.target.style.boxShadow = `0 0 16px rgba(139,26,46,0.3)`; } }}
+              onMouseLeave={e => { if (!selected) { e.target.style.borderColor = "rgba(201,168,76,0.2)"; e.target.style.boxShadow = "none"; } }}>
+              <span style={{ display: "block", fontFamily: "'Montserrat'", fontSize: "0.55rem", letterSpacing: "0.2em", color: GOLD, textTransform: "uppercase", marginBottom: 6 }}>
+                {["A", "B", "C", "D"][i]}
+              </span>
+              {opt.text}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── BIHTER'S FATE QUIZ ───────────────────────────────────────────────────────
+const fateStory = {
+  start: {
+    id: "start",
+    text: "Behlül ile her şey başlamak üzere. Ama o gece, yalının karanlık koridorunda bir seçimle karşı karşıyasın...",
+    visual: "🌙",
+    choices: [
+      { text: "Behlül ile kaçmaya karar veriyorsun", next: "esc_yes" },
+      { text: "Geri çekilip Adnan'a itiraf ediyorsun", next: "confess" },
+    ],
+  },
+  esc_yes: {
+    id: "esc_yes",
+    text: "Bavulunu hazırladın. Ama tam kapıya geldiğinde Firdevs Hanım'ın gözleriyle karşılaştın. O biliyordu her şeyi.",
+    visual: "🧳",
+    choices: [
+      { text: "Firdevs'e meydan okuyup çıkıyorsun", next: "escape_defiance" },
+      { text: "Duraksıyor, geri dönüyorsun", next: "return" },
+    ],
+  },
+  confess: {
+    id: "confess",
+    text: "Adnan Bey'in odasına girdin. O masumiyetiyle sana baktı. Sözcükler boğazında düğümlendi...",
+    visual: "🕯️",
+    choices: [
+      { text: "Her şeyi anlattın, af diledin", next: "forgiven" },
+      { text: "Yutkundun, çekip gittin", next: "silence_end" },
+    ],
+  },
+  escape_defiance: {
+    id: "escape_defiance",
+    text: "Behlül seni bekliyordu. Ama gözlerinde eskisi gibi ateş yoktu. 'Bihter...' dedi sadece. Ve sen anladın.",
+    visual: "🚪",
+    choices: [
+      { text: "Yine de gidiyorsun", next: "ending_bitter" },
+      { text: "Dönüp yalıya bakıyorsun son kez", next: "ending_open" },
+    ],
+  },
+  return: {
+    id: "return",
+    text: "Firdevs seni bıraktı geçmene. Ama artık onun ipindeydin. Ya Nihal'i düşünüp hayatını kurtarırsın, ya da...",
+    visual: "⛓️",
+    choices: [
+      { text: "Nihal için her şeyi görmezden geliyorsun", next: "ending_sacrifice" },
+      { text: "Kendi yolunu çizmeye çalışıyorsun", next: "ending_fight" },
+    ],
+  },
+  forgiven: {
+    id: "forgiven",
+    text: "Adnan ağladı. Sen de ağladın. Belki af vardı, belki yoktu. Ama o geceyi birlikte geçirdiniz.",
+    visual: "💔",
+    choices: null,
+    ending: { title: "Kırık Barış", desc: "Gerçek söylendi. Belki her şey bitmedi ama hiçbir şey de eskisi gibi olmadı. Bihter hayatta kaldı, hafif değil ama dik durdu.", color: "#4A7FA5" },
+  },
+  silence_end: {
+    id: "silence_end",
+    text: "Sessizlik en büyük itiraftı. O gece hiçbir şey söylenmedi ama her şey değişti.",
+    visual: "🌑",
+    choices: null,
+    ending: { title: "Sessiz Fırtına", desc: "Bihter içine çekildi. Yalı devam etti ama o artık o yalının kadını değildi.", color: "#888" },
+  },
+  ending_bitter: {
+    id: "ending_bitter",
+    text: "Gittiniz. Behlül başka bir limanda başka bir hayat kurdu. Sen hâlâ o koridoru rüyanda görüyorsun.",
+    visual: "⚓",
+    choices: null,
+    ending: { title: "Kırık Kaçış", desc: "Özgürlük sandığın şey yalnızca mekân değişikliğiydi. Bihter gitmeyi seçti ama içindeki yalıyı bırakamadı.", color: CRIMSON },
+  },
+  ending_open: {
+    id: "ending_open",
+    text: "Yalıya son kez baktın. Adnan'ın penceresinde bir ışık vardı. Yürümeye devam ettin.",
+    visual: "🌅",
+    choices: null,
+    ending: { title: "Açık Son", desc: "Bihter ne geride kaldı ne tamamen gitti. Bu belirsizlik belki de en dürüst finaldi.", color: GOLD },
+  },
+  ending_sacrifice: {
+    id: "ending_sacrifice",
+    text: "Nihal için her şeyi susturdun. Yıllar geçti. Bir gün Nihal sana teşekkür etti, ne için bilmeden.",
+    visual: "🌸",
+    choices: null,
+    ending: { title: "Sessiz Fedakarlık", desc: "Bihter kendini yok etti ama Nihal'in gülümsemesinde bir şeyler buldu. Farklı bir trajedi.", color: "#3A6B5C" },
+  },
+  ending_fight: {
+    id: "ending_fight",
+    text: "Firdevs'e karşı durdun. Kısa sürdü ama o an için tüm yalı senindi.",
+    visual: "🔥",
+    choices: null,
+    ending: { title: "Son İsyan", desc: "Bihter'in en parlak anı ve belki de son anı. Ama o ışık söndürülemez.", color: CRIMSON },
+  },
+};
+
+function BihterFate() {
+  const [nodeId, setNodeId] = useState("start");
+  const node = fateStory[nodeId];
+
+  return (
+    <div style={{ animation: "reveal 0.5s ease both" }}>
+      <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+        <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>{node.visual}</div>
+        <p style={{
+          fontFamily: "'Playfair Display', serif", fontStyle: "italic",
+          fontSize: "clamp(1rem,2.5vw,1.2rem)", color: IVORY, lineHeight: 1.8,
+          maxWidth: 560, margin: "0 auto",
+        }}>
+          {node.text}
+        </p>
+      </div>
+
+      {node.choices ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 500, margin: "0 auto" }}>
+          {node.choices.map((c, i) => (
+            <button key={i} onClick={() => setNodeId(c.next)} style={{
+              background: "rgba(13,27,42,0.9)", border: `1px solid rgba(201,168,76,0.25)`,
+              color: IVORY, fontFamily: "'Lora', serif", fontStyle: "italic",
+              fontSize: "1rem", padding: "1.2rem 1.6rem", cursor: "pointer",
+              textAlign: "left", transition: "all 0.3s", lineHeight: 1.6,
+            }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = CRIMSON; e.currentTarget.style.boxShadow = `0 0 20px rgba(139,26,46,0.25)`; e.currentTarget.style.paddingLeft = "2rem"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(201,168,76,0.25)"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.paddingLeft = "1.6rem"; }}>
+              <span style={{ color: GOLD, fontFamily: "'Montserrat'", fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+                {["I. Seçenek", "II. Seçenek"][i]}
+              </span>
+              {c.text}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div style={{ textAlign: "center", animation: "reveal 0.6s ease both" }}>
+          <div style={{ display: "inline-block", border: `1px solid ${node.ending.color}`, padding: "2rem 2.5rem", marginTop: "1rem", maxWidth: 500 }}>
+            <p style={{ fontFamily: "'Montserrat'", fontSize: "0.6rem", letterSpacing: "0.25em", color: node.ending.color, textTransform: "uppercase", marginBottom: "0.8rem" }}>
+              Sonunuz
+            </p>
+            <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.5rem", color: IVORY, marginBottom: "1rem" }}>
+              {node.ending.title}
+            </h3>
+            <p style={{ fontFamily: "'Lora', serif", fontStyle: "italic", color: IVORY_DIM, lineHeight: 1.75, marginBottom: "1.5rem" }}>
+              {node.ending.desc}
+            </p>
+            <button onClick={() => setNodeId("start")} style={{
+              background: "transparent", border: `1px solid ${GOLD}`, color: GOLD,
+              fontFamily: "'Montserrat'", fontSize: "0.65rem", letterSpacing: "0.18em",
+              padding: "10px 28px", cursor: "pointer", textTransform: "uppercase",
+            }}>
+              Yeniden Başla
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── QUIZ PAGE ────────────────────────────────────────────────────────────────
+function Quiz() {
+  const [mode, setMode] = useState(null); // null | "who" | "fate"
+  return (
+    <section style={{ padding: "7rem clamp(1rem,5vw,4rem) 5rem", minHeight: "80vh" }}>
+      <div style={{ maxWidth: 780, margin: "0 auto" }}>
+        <SectionHeader title="İnteraktif Quiz" subtitle="Kendini ve Bihter'in kaderini keşfet" />
+
+        {!mode && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginTop: "3rem" }}>
+            {[
+              { id: "who", icon: "🪞", title: "Hangi Karaktersin?", desc: "Kişilik testine dayalı karakter eşleştirmesi", color: CRIMSON },
+              { id: "fate", icon: "⚔️", title: "Bihter'in Kaderi", desc: "Seçimlerinle hikayenin finalini değiştir", color: GOLD },
+            ].map(m => (
+              <button key={m.id} onClick={() => setMode(m.id)} style={{
+                background: "rgba(13,27,42,0.8)", border: `1px solid ${m.color}33`,
+                color: IVORY, padding: "2.4rem 2rem", cursor: "pointer",
+                textAlign: "left", transition: "all 0.4s ease",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = m.color; e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = `0 16px 40px rgba(0,0,0,0.4)`; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = `${m.color}33`; e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
+                <div style={{ fontSize: "2.5rem", marginBottom: "1.2rem" }}>{m.icon}</div>
+                <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", color: IVORY, marginBottom: "0.6rem" }}>{m.title}</h3>
+                <p style={{ fontFamily: "'Lora', serif", fontStyle: "italic", fontSize: "0.88rem", color: IVORY_DIM, lineHeight: 1.6 }}>{m.desc}</p>
+                <div style={{ marginTop: "1.5rem", fontFamily: "'Montserrat'", fontSize: "0.6rem", letterSpacing: "0.2em", color: m.color, textTransform: "uppercase" }}>
+                  Başla →
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {mode && (
+          <div style={{ marginTop: "3rem" }}>
+            <button onClick={() => setMode(null)} style={{
+              background: "none", border: "none", color: IVORY_DIM, cursor: "pointer",
+              fontFamily: "'Montserrat'", fontSize: "0.65rem", letterSpacing: "0.15em",
+              textTransform: "uppercase", marginBottom: "2rem", display: "flex", alignItems: "center", gap: 8,
+            }}>
+              ← Geri
+            </button>
+            <div style={{
+              background: "rgba(13,27,42,0.7)", border: "1px solid rgba(201,168,76,0.12)",
+              backdropFilter: "blur(12px)", padding: "2.5rem clamp(1rem,4vw,2.5rem)",
+            }}>
+              {mode === "who" ? <WhichCharacterQuiz /> : <BihterFate />}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ─── FIRDEVS NOTES ───────────────────────────────────────────────────────────
+const notes = [
+  { date: "15 Temmuz", text: "Bugün Bihter ile Adnan'ın nikahını izledim. Herkes mutlu sandı beni. İçimde ne olduğunu yalnız ben bilirim." },
+  { date: "3 Ağustos", text: "Behlül tehlikeli. Güzel ve tehlikeli. Kızım bunun farkında mı? Ben farkındayım ve bu beni hem korkutuyor hem... hayır, yazmayacağım." },
+  { date: "22 Eylül", text: "İp elimde. Hep elimde oldu. Sorun şu: bazen ip beni de çekiyor." },
+  { date: "7 Kasım", text: "Yalı susuyor bu gece. Ama suskunluk bana yalan söyler. Yarın her şey değişecek." },
+];
+
+function FirdevsNotes() {
+  const [openIdx, setOpenIdx] = useState(null);
+  return (
+    <section style={{ padding: "6rem clamp(1rem,5vw,4rem) 5rem" }}>
+      <div style={{ maxWidth: 800, margin: "0 auto" }}>
+        <SectionHeader title="Firdevs Hanım'ın Notları" subtitle="Gizli defterden satırlar" />
+        <div style={{ marginTop: "3rem", display: "flex", flexDirection: "column", gap: 16 }}>
+          {notes.map((note, i) => (
+            <div key={i} onClick={() => setOpenIdx(openIdx === i ? null : i)} style={{
+              background: openIdx === i ? "rgba(107,76,122,0.08)" : "rgba(13,27,42,0.6)",
+              border: `1px solid ${openIdx === i ? "#6B4C7A" : "rgba(201,168,76,0.1)"}`,
+              padding: "1.4rem 1.8rem", cursor: "pointer", transition: "all 0.35s ease",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", color: openIdx === i ? "#9B7AB0" : IVORY_DIM, fontSize: "1rem" }}>
+                  {note.date}
+                </span>
+                <span style={{ color: GOLD, fontSize: "0.8rem" }}>{openIdx === i ? "−" : "+"}</span>
+              </div>
+              {openIdx === i && (
+                <p style={{
+                  fontFamily: "'Lora', serif", fontStyle: "italic",
+                  color: IVORY, fontSize: "0.97rem", lineHeight: 1.8,
+                  marginTop: "1rem", animation: "fadeInUp 0.3s ease both",
+                }}>
+                  {note.text}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── ARCHIVE PAGE ─────────────────────────────────────────────────────────────
+function Archive() {
+  const items = [
+    { title: "Bihter'in Tragik Arzu Haritası", type: "Analiz", date: "1899", color: CRIMSON },
+    { title: "Behlül: Modernliğin Çöküşü", type: "Deneme", date: "1900", color: GOLD },
+    { title: "Firdevs Yöreoğlu'nun İktidar Oyunu", type: "İnceleme", date: "1900", color: "#6B4C7A" },
+    { title: "Nihal'in Piyanosu ve Masumiyet Simgesi", type: "Sembol Analizi", date: "1901", color: "#3A6B5C" },
+    { title: "Uşaklıgil'de Mekan ve Ruh", type: "Mekan Analizi", date: "1902", color: "#4A7FA5" },
+    { title: "Aşk-ı Memnu'da Ölüm Motifi", type: "Motif Çalışması", date: "1903", color: "#8B5E3C" },
+  ];
+  return (
+    <section style={{ padding: "7rem clamp(1rem,5vw,4rem) 5rem" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <SectionHeader title="Edebi Galeri" subtitle="Yazılar, analizler ve yorumlar" />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20, marginTop: "3rem" }}>
+          {items.map((item, i) => (
+            <div key={i} style={{
+              background: "rgba(13,27,42,0.8)", border: "1px solid rgba(201,168,76,0.12)",
+              padding: "2rem", position: "relative", overflow: "hidden", cursor: "pointer",
+              transition: "all 0.4s ease", animation: `fadeInUp 0.6s ease ${i * 0.08}s both`,
+            }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = item.color;
+                e.currentTarget.style.transform = "translateY(-4px)";
+                e.currentTarget.querySelector(".cover-bar").style.width = "100%";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = "rgba(201,168,76,0.12)";
+                e.currentTarget.style.transform = "none";
+                e.currentTarget.querySelector(".cover-bar").style.width = "0%";
+              }}>
+              <div className="cover-bar" style={{ position: "absolute", top: 0, left: 0, width: "0%", height: 2, background: item.color, transition: "width 0.4s ease" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.2rem" }}>
+                <span style={{ fontFamily: "'Montserrat'", fontSize: "0.58rem", letterSpacing: "0.2em", color: item.color, textTransform: "uppercase", background: `${item.color}18`, padding: "3px 10px" }}>
+                  {item.type}
+                </span>
+                <span style={{ fontFamily: "'Montserrat'", fontSize: "0.6rem", color: IVORY_DIM }}>{item.date}</span>
+              </div>
+              <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", color: IVORY, lineHeight: 1.5, marginBottom: "0.8rem" }}>
+                {item.title}
+              </h3>
+              <div style={{ fontFamily: "'Montserrat'", fontSize: "0.6rem", color: GOLD, letterSpacing: "0.15em", textTransform: "uppercase" }}>
+                Oku →
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── FOOTER ───────────────────────────────────────────────────────────────────
+function Footer() {
+  return (
+    <footer style={{ borderTop: "1px solid rgba(201,168,76,0.1)", padding: "3rem clamp(1rem,4vw,3rem)", textAlign: "center" }}>
+      <div style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: "1.1rem", color: GOLD, marginBottom: "0.6rem" }}>
+        Ziyagil Arşivi
+      </div>
+      <p style={{ fontFamily: "'Montserrat'", fontSize: "0.65rem", color: IVORY_DIM, letterSpacing: "0.12em" }}>
+        Halit Ziya Uşaklıgil'e saygıyla · Aşk-ı Memnu · 1900
+      </p>
+      <div style={{ marginTop: "1.5rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 14 }}>
+        <div style={{ height: 1, width: 40, background: `linear-gradient(to right, transparent, ${GOLD}55)` }} />
+        <div style={{ width: 4, height: 4, border: `1px solid ${GOLD}`, transform: "rotate(45deg)", opacity: 0.5 }} />
+        <div style={{ height: 1, width: 40, background: `linear-gradient(to left, transparent, ${GOLD}55)` }} />
+      </div>
+    </footer>
+  );
+}
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
+export default function App() {
+  const [active, setActive] = useState("Malikane");
+
+  const pageMap = {
+    "Malikane": <Hero setActive={setActive} />,
+    "Karakterler": <Characters />,
+    "Arşiv": <Archive />,
+    "Firdevs Hanım'ın Notları": <FirdevsNotes />,
+    "Quiz": <Quiz />,
+  };
+
+  return (
+    <>
+      <style>{fonts + globalStyles}</style>
+      <Nav active={active} setActive={setActive} />
+      <main>
+        {active === "Malikane" ? (
+          <>
+            {pageMap["Malikane"]}
+            <Characters />
+            <Literary />
+          </>
+        ) : (
+          <div style={{ paddingTop: 68 }}>
+            {pageMap[active]}
+          </div>
+        )}
+      </main>
+      <Footer />
+    </>
+  );
+}
